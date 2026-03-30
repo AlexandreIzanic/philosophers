@@ -12,6 +12,13 @@ void	init_args(t_table *table, char *argv[], int argc)
 		table->nb_meals = 0;
 }
 
+void    one_philo(t_table *table)
+{
+    printf(RED "Philosopher 1 has taken a fork\n" RESET);
+    usleep(table->time_to_die * 1000);
+    printf(RED "Philosopher 1 has died in %d ms\n" RESET, table->time_to_die);
+}
+
 int ft_atoi(const char *str)
 {
     long result = 0;

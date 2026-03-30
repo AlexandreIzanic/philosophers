@@ -12,8 +12,21 @@ void    init_philos(t_table *table)
         table->philos[i].id = i + 1;
         table->philos[i].nb_meals_eaten = 0;
         table->philos[i].time_to_eat = table->time_to_eat;
-        // Initialize left and right forks here
+        table->philos[i].time_to_sleep = table->time_to_sleep;
+        table->philos[i].left_fork = &table->forks[i];
+        table->philos[i].right_fork = &table->forks[(i + 1) % table->nb_philo];
     }
+}
+
+void    init_forks(t_table *table)
+{
+    int i;
+
+    table->forks = malloc(sizeof(pthread_mutex_t) * table->nb_philo);
+    if (!table->forks)
+        return ;
+    for (i = 0; i < table->nb_philo; i++)
+        pthread_mutex_init(&table->forks[i], NULL);
 }
 
 void *philo_routine(void *arg)
@@ -21,11 +34,14 @@ void *philo_routine(void *arg)
     t_philo *philo = (t_philo *)arg;
     (void)philo;
     
+
     // Implement philosopher's routine here
     // For example: think, pick up forks, eat, put down forks, sleep
     while (1)
     {
-        msg_eat(philo);
+        philo_eat(philo);
+        philo_think(philo);
+        philo_sleep(philo);
     }
     return NULL;
 }
@@ -40,6 +56,12 @@ int create_philo_threads(t_table *table)
         return (1);
     for (i = 0; i < table->nb_philo; i++)
     {
+        if (table->nb_philo == 1)
+        {
+            one_philo(table);
+            free(threads);
+            return (0);
+        }
         if (pthread_create(&threads[i], NULL, philo_routine, &table->philos[i]) != 0)
         {
             free(threads);
