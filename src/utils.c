@@ -16,9 +16,11 @@ void	one_philo(t_table *table)
 	t_philo	*philo;
 
 	philo = &table->philos[0];
+	pthread_mutex_lock(philo->left_fork);
 	custom_print_timestamp(philo, MSG_TAKEN_FORK);
 	ft_usleep(table->time_to_die, table);
 	print_death(philo);
+	pthread_mutex_unlock(philo->left_fork);
 }
 
 /* Vrai si str est un entier positif valide (+ optionnel, <= INT_MAX). */

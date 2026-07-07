@@ -14,26 +14,21 @@
 # define PHILO_H
 
 # define RED "\033[31m"
-# define GREEN "\033[32m"
 # define RESET "\033[0m"
-# define ORANGE "\033[33m"
-# define PURPLE "\033[35m"
 
 /* message macros */
-# define MSG_FINISHED "has finished eating"
 # define MSG_THINK "is thinking"
 # define MSG_EAT "is eating"
 # define MSG_SLEEP "is sleeping"
 # define MSG_TAKEN_FORK "has taken a fork"
-# define MSG_DIED "has died"
+# define MSG_DIED "died"
 
 # include <stdio.h>
 # include <limits.h>
-# include <stddef.h>
-# include <stdint.h>
 # include <unistd.h>
 # include <stdlib.h>
 # include <pthread.h>
+# include <sys/time.h>
 # include <sys/time.h>
 
 typedef struct s_philo
@@ -67,8 +62,8 @@ typedef struct s_table
 
 int				ft_atoi(const char *str);
 void			init_args(t_table *table, char *argv[], int argc);
-void			init_table(t_table *table);
-void			init_philos(t_table *table);
+int				init_table(t_table *table);
+int				init_philos(t_table *table);
 void			cleanup(t_table *table);
 int				validate_args(int argc, char *argv[]);
 int				join_threads(pthread_t *threads, int nb_philo);

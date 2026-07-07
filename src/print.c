@@ -56,7 +56,7 @@ void	custom_print_timestamp(t_philo *philo, const char *message)
 	table = philo->table;
 	pthread_mutex_lock(&table->print_mutex);
 	if (!is_stopped(table))
-		printf("%ld Philosopher %d %s\n",
+		printf("%ld %d %s\n",
 			get_time_ms() - table->start_time, philo->id, message);
 	pthread_mutex_unlock(&table->print_mutex);
 }

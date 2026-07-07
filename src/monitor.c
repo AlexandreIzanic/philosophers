@@ -22,7 +22,7 @@ void	print_death(t_philo *philo)
 	table = philo->table;
 	pthread_mutex_lock(&table->print_mutex);
 	if (!is_stopped(table))
-		printf("%ld Philosopher %d %s\n",
+		printf("%ld %d %s\n",
 			get_time_ms() - table->start_time, philo->id, MSG_DIED);
 	pthread_mutex_lock(&table->stop_mutex);
 	table->stop = 1;

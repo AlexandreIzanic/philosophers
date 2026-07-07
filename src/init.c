@@ -23,32 +23,38 @@ void	init_args(t_table *table, char *argv[], int argc)
 		table->nb_meals = -1;
 }
 
-void	init_table(t_table *table)
+int	init_table(t_table *table)
 {
 	int	i;
 
 	table->stop = 0;
+	table->philos = NULL;
 	table->start_time = get_time_ms();
 	pthread_mutex_init(&table->stop_mutex, NULL);
 	pthread_mutex_init(&table->print_mutex, NULL);
 	table->forks = malloc(sizeof(pthread_mutex_t) * table->nb_philo);
 	if (!table->forks)
-		return ;
+	{
+		pthread_mutex_destroy(&table->stop_mutex);
+		pthread_mutex_destroy(&table->print_mutex);
+		return (1);
+	}
 	i = 0;
 	while (i < table->nb_philo)
 	{
 		pthread_mutex_init(&table->forks[i], NULL);
 		i++;
 	}
+	return (0);
 }
 
-void	init_philos(t_table *table)
+int	init_philos(t_table *table)
 {
 	int	i;
 
 	table->philos = malloc(sizeof(t_philo) * table->nb_philo);
 	if (!table->philos)
-		return ;
+		return (1);
 	i = 0;
 	while (i < table->nb_philo)
 	{
@@ -64,6 +70,7 @@ void	init_philos(t_table *table)
 		pthread_mutex_init(&table->philos[i].meal_mutex, NULL);
 		i++;
 	}
+	return (0);
 }
 
 void	cleanup(t_table *table)
@@ -74,7 +81,8 @@ void	cleanup(t_table *table)
 	while (i < table->nb_philo)
 	{
 		pthread_mutex_destroy(&table->forks[i]);
-		pthread_mutex_destroy(&table->philos[i].meal_mutex);
+		if (table->philos)
+			pthread_mutex_destroy(&table->philos[i].meal_mutex);
 		i++;
 	}
 	pthread_mutex_destroy(&table->stop_mutex);
