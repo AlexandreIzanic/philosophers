@@ -11,26 +11,32 @@
 /* ************************************************************************** */
 #include "philo.h"
 
+static int	print_error(const char *msg)
+{
+	printf(RED "Error\n%s\n" RESET, msg);
+	return (1);
+}
+
 int	main(int argc, char *argv[])
 {
 	t_table	table;
 
 	if (argc < 5 || argc > 6)
-		return (printf(RED "Error\nargs nb\n" RESET), 1);
+		return (print_error("args nb"));
 	if (validate_args(argc, argv) != 0)
-		return (printf(RED "Error\ninvalid args\n" RESET), 1);
+		return (print_error("invalid args"));
 	init_args(&table, argv, argc);
 	if (init_table(&table) != 0)
-		return (printf(RED "Error\ninit\n" RESET), 1);
+		return (print_error("init"));
 	if (init_philos(&table) != 0)
 	{
 		cleanup(&table);
-		return (printf(RED "Error\ninit\n" RESET), 1);
+		return (print_error("init"));
 	}
 	if (run_simulation(&table) != 0)
 	{
 		cleanup(&table);
-		return (printf(RED "Error\nthread creation\n" RESET), 1);
+		return (print_error("thread creation"));
 	}
 	cleanup(&table);
 	return (0);

@@ -13,14 +13,12 @@
 
 void	init_args(t_table *table, char *argv[], int argc)
 {
-	int	err;
-
-	table->nb_philo = ft_atoi(argv[1], &err);
-	table->time_to_die = ft_atoi(argv[2], &err);
-	table->time_to_eat = ft_atoi(argv[3], &err);
-	table->time_to_sleep = ft_atoi(argv[4], &err);
+	table->nb_philo = ft_atoi(argv[1]);
+	table->time_to_die = ft_atoi(argv[2]);
+	table->time_to_eat = ft_atoi(argv[3]);
+	table->time_to_sleep = ft_atoi(argv[4]);
 	if (argc == 6)
-		table->nb_meals = ft_atoi(argv[5], &err);
+		table->nb_meals = ft_atoi(argv[5]);
 	else
 		table->nb_meals = -1;
 }
@@ -29,15 +27,15 @@ int	init_table(t_table *table)
 {
 	int	i;
 
-	table->stop = 0;
+	table->stop_flag = 0;
 	table->philos = NULL;
 	table->start_time = get_time_ms();
-	pthread_mutex_init(&table->stop_mutex, NULL);
+	pthread_mutex_init(&table->stop_flag_mutex, NULL);
 	pthread_mutex_init(&table->print_mutex, NULL);
 	table->forks = malloc(sizeof(pthread_mutex_t) * table->nb_philo);
 	if (!table->forks)
 	{
-		pthread_mutex_destroy(&table->stop_mutex);
+		pthread_mutex_destroy(&table->stop_flag_mutex);
 		pthread_mutex_destroy(&table->print_mutex);
 		return (1);
 	}

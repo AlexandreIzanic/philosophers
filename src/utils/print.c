@@ -11,7 +11,6 @@
 /* ************************************************************************** */
 #include "philo.h"
 
-/* Affiche une ligne d'etat brute (appele sous print_mutex deja verrouille). */
 static void	log_line(t_philo *philo, const char *message)
 {
 	printf("%ld %d %s\n",
@@ -29,10 +28,7 @@ void	print_status(t_philo *philo, const char *message)
 	pthread_mutex_unlock(&table->print_mutex);
 }
 
-/*
-** Affiche la mort d'un philosophe puis leve le flag stop, le tout sous
-** print_mutex pour qu'aucun autre thread ne puisse afficher apres "died".
-*/
+
 void	print_death(t_philo *philo)
 {
 	t_table	*table;

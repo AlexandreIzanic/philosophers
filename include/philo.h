@@ -49,15 +49,15 @@ typedef struct s_table
 	int				time_to_eat;
 	int				time_to_sleep;
 	long			start_time;
-	int				stop;
-	pthread_mutex_t	stop_mutex;
+	int				stop_flag;
+	pthread_mutex_t	stop_flag_mutex;
 	pthread_mutex_t	print_mutex;
 	t_philo			*philos;
 	pthread_mutex_t	*forks;
 }	t_table;
 
 /* parsing.c */
-int				ft_atoi(const char *str, int *err);
+int				ft_atoi(const char *str);
 int				validate_args(int argc, char *argv[]);
 
 /* init.c */
@@ -67,7 +67,7 @@ int				init_philos(t_table *table);
 
 /* cleanup.c */
 void			cleanup(t_table *table);
-int				join_threads(pthread_t *threads, int nb_philo);
+void			join_threads(pthread_t *threads, int nb_philo);
 
 /* simulation.c */
 void			*philo_routine(void *arg);

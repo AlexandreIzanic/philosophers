@@ -11,14 +11,13 @@
 /* ************************************************************************** */
 #include "philo.h"
 
-int	join_threads(pthread_t *threads, int nb_philo)
+void	join_threads(pthread_t *threads, int nb_philo)
 {
 	int	i;
 
 	i = nb_philo;
 	while (i--)
 		pthread_join(threads[i], NULL);
-	return (0);
 }
 
 void	cleanup(t_table *table)
@@ -33,7 +32,7 @@ void	cleanup(t_table *table)
 			pthread_mutex_destroy(&table->philos[i].meal_mutex);
 		i++;
 	}
-	pthread_mutex_destroy(&table->stop_mutex);
+	pthread_mutex_destroy(&table->stop_flag_mutex);
 	pthread_mutex_destroy(&table->print_mutex);
 	free(table->forks);
 	free(table->philos);

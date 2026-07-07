@@ -37,14 +37,8 @@ void	put_down_forks(t_philo *philo)
 
 void	philo_think(t_philo *philo)
 {
-	long	think_time;
-
 	print_status(philo, MSG_THINK);
-	think_time = philo->table->time_to_die - philo->table->time_to_eat
-		- philo->table->time_to_sleep;
-	if (think_time < 0)
-		think_time = 0;
-	ft_usleep(think_time / 2, philo->table);
+	ft_usleep(20, philo->table);
 }
 
 void	philo_eat(t_philo *philo)
@@ -52,12 +46,10 @@ void	philo_eat(t_philo *philo)
 	pick_up_forks(philo);
 	pthread_mutex_lock(&philo->meal_mutex);
 	philo->last_meal_time = get_time_ms();
+	philo->nb_meals_eaten++;
 	pthread_mutex_unlock(&philo->meal_mutex);
 	print_status(philo, MSG_EAT);
 	ft_usleep(philo->table->time_to_eat, philo->table);
-	pthread_mutex_lock(&philo->meal_mutex);
-	philo->nb_meals_eaten++;
-	pthread_mutex_unlock(&philo->meal_mutex);
 	put_down_forks(philo);
 }
 

@@ -15,15 +15,15 @@ int	is_stopped(t_table *table)
 {
 	int	value;
 
-	pthread_mutex_lock(&table->stop_mutex);
-	value = table->stop;
-	pthread_mutex_unlock(&table->stop_mutex);
+	pthread_mutex_lock(&table->stop_flag_mutex);
+	value = table->stop_flag;
+	pthread_mutex_unlock(&table->stop_flag_mutex);
 	return (value);
 }
 
 void	set_stop(t_table *table)
 {
-	pthread_mutex_lock(&table->stop_mutex);
-	table->stop = 1;
-	pthread_mutex_unlock(&table->stop_mutex);
+	pthread_mutex_lock(&table->stop_flag_mutex);
+	table->stop_flag = 1;
+	pthread_mutex_unlock(&table->stop_flag_mutex);
 }
