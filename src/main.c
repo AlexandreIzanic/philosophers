@@ -11,71 +11,11 @@
 /* ************************************************************************** */
 #include "philo.h"
 
-void	init_philos(t_table *table)
-{
-	int	i;
-
-	table->philos = malloc(sizeof(t_philo) * table->nb_philo);
-	if (!table->philos)
-		return ;
-	i = 0;
-	while (i < table->nb_philo)
-	{
-		table->philos[i].id = i + 1;
-		table->philos[i].nb_meals_eaten = 0;
-		table->philos[i].max_meals = table->nb_meals;
-		table->philos[i].time_to_eat = table->time_to_eat;
-		table->philos[i].time_to_sleep = table->time_to_sleep;
-		table->philos[i].last_meal_time = table->start_time;
-		table->philos[i].table = table;
-		table->philos[i].left_fork = &table->forks[i];
-		table->philos[i].right_fork = &table->forks[(i + 1) % table->nb_philo];
-		pthread_mutex_init(&table->philos[i].meal_mutex, NULL);
-		i++;
-	}
-}
-
-void	init_table(t_table *table)
-{
-	int	i;
-
-	table->stop = 0;
-	table->start_time = get_time_ms();
-	pthread_mutex_init(&table->stop_mutex, NULL);
-	pthread_mutex_init(&table->print_mutex, NULL);
-	table->forks = malloc(sizeof(pthread_mutex_t) * table->nb_philo);
-	if (!table->forks)
-		return ;
-	i = 0;
-	while (i < table->nb_philo)
-	{
-		pthread_mutex_init(&table->forks[i], NULL);
-		i++;
-	}
-}
-
-void	cleanup(t_table *table)
-{
-	int	i;
-
-	i = 0;
-	while (i < table->nb_philo)
-	{
-		pthread_mutex_destroy(&table->forks[i]);
-		pthread_mutex_destroy(&table->philos[i].meal_mutex);
-		i++;
-	}
-	pthread_mutex_destroy(&table->stop_mutex);
-	pthread_mutex_destroy(&table->print_mutex);
-	free(table->forks);
-	free(table->philos);
-}
-
 static int	philo_is_full(t_philo *philo)
 {
 	int	full;
 
-	if (philo->max_meals <= 0)
+	if (philo->max_meals < 0)
 		return (0);
 	pthread_mutex_lock(&philo->meal_mutex);
 	full = (philo->nb_meals_eaten >= philo->max_meals);
@@ -132,14 +72,17 @@ int	main(int argc, char *argv[])
 	t_table	table;
 
 	if (argc < 5 || argc > 6)
-		return (printf(RED "Error\nargs nb" RESET), 1);
+		return (printf(RED "Error\nargs nb\n" RESET), 1);
+	if (validate_args(argc, argv) != 0)
+		return (printf(RED "Error\ninvalid args\n" RESET), 1);
 	init_args(&table, argv, argc);
-	if (validate_args(&table) != 0)
-		return (printf(RED "Error\ninvalid args" RESET), 1);
 	init_table(&table);
 	init_philos(&table);
 	if (create_philo_threads(&table) != 0)
-		return (printf(RED "Error\nthread creation" RESET), cleanup(&table), 1);
+	{
+		cleanup(&table);
+		return (printf(RED "Error\nthread creation\n" RESET), 1);
+	}
 	cleanup(&table);
 	return (0);
 }

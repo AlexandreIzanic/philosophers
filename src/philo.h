@@ -67,7 +67,10 @@ typedef struct s_table
 
 int				ft_atoi(const char *str);
 void			init_args(t_table *table, char *argv[], int argc);
-int				validate_args(t_table *table);
+void			init_table(t_table *table);
+void			init_philos(t_table *table);
+void			cleanup(t_table *table);
+int				validate_args(int argc, char *argv[]);
 int				join_threads(pthread_t *threads, int nb_philo);
 void			one_philo(t_table *table);
 void			pick_up_forks(t_philo *philo);

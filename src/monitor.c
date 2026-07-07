@@ -38,7 +38,7 @@ static int	philo_is_dead(t_table *table, int i)
 
 	pthread_mutex_lock(&table->philos[i].meal_mutex);
 	since_last_meal = get_time_ms() - table->philos[i].last_meal_time;
-	full = (table->nb_meals > 0
+	full = (table->nb_meals >= 0
 			&& table->philos[i].nb_meals_eaten >= table->nb_meals);
 	pthread_mutex_unlock(&table->philos[i].meal_mutex);
 	if (full)
@@ -52,7 +52,7 @@ static int	all_ate_enough(t_table *table)
 	int	i;
 	int	full;
 
-	if (table->nb_meals <= 0)
+	if (table->nb_meals < 0)
 		return (0);
 	i = 0;
 	full = 0;

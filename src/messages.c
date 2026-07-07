@@ -37,7 +37,14 @@ void	put_down_forks(t_philo *philo)
 
 void	philo_think(t_philo *philo)
 {
+	long	think_time;
+
 	custom_print_timestamp(philo, MSG_THINK);
+	think_time = philo->table->time_to_die - philo->time_to_eat
+		- philo->time_to_sleep;
+	if (think_time < 0)
+		think_time = 0;
+	ft_usleep(think_time / 2, philo->table);
 }
 
 void	philo_eat(t_philo *philo)
