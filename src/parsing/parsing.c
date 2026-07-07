@@ -11,7 +11,6 @@
 /* ************************************************************************** */
 #include "philo.h"
 
-/* Parse un entier positif. *err = 1 si invalide (vide, non-digit, > INT_MAX). */
 int	ft_atoi(const char *str, int *err)
 {
 	int		i;

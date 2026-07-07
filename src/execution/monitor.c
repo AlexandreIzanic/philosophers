@@ -11,7 +11,6 @@
 /* ************************************************************************** */
 #include "philo.h"
 
-/* Un philosophe est mort s'il n'a pas mange depuis plus de time_to_die ms. */
 static int	philo_is_dead(t_table *table, int i)
 {
 	long	since_last_meal;
@@ -27,7 +26,6 @@ static int	philo_is_dead(t_table *table, int i)
 	return (since_last_meal > table->time_to_die);
 }
 
-/* Vrai si nb_meals est defini et que tous ont atteint leur quota. */
 static int	all_ate_enough(t_table *table)
 {
 	int	i;
@@ -48,10 +46,6 @@ static int	all_ate_enough(t_table *table)
 	return (full == table->nb_philo);
 }
 
-/*
-** Thread surveillant : boucle tant que la simulation tourne, verifie la mort
-** de chaque philosophe et la fin par quota de repas, puis stoppe tout.
-*/
 void	*monitor_routine(void *arg)
 {
 	t_table	*table;
@@ -64,17 +58,11 @@ void	*monitor_routine(void *arg)
 		while (i < table->nb_philo)
 		{
 			if (philo_is_dead(table, i))
-			{
-				print_death(&table->philos[i]);
-				return (NULL);
-			}
+				return (print_death(&table->philos[i]), NULL);
 			i++;
 		}
 		if (all_ate_enough(table))
-		{
-			set_stop(table);
-			return (NULL);
-		}
+			return (set_stop(table), NULL);
 		usleep(500);
 	}
 	return (NULL);
