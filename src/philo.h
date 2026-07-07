@@ -29,17 +29,13 @@
 # include <stdlib.h>
 # include <pthread.h>
 # include <sys/time.h>
-# include <sys/time.h>
 
 typedef struct s_philo
 {
 	int				id;
 	int				nb_meals_eaten;
-	int				max_meals;
 	pthread_mutex_t	*left_fork;
 	pthread_mutex_t	*right_fork;
-	int				time_to_eat;
-	int				time_to_sleep;
 	long			last_meal_time;
 	pthread_mutex_t	meal_mutex;
 	struct s_table	*table;
@@ -60,26 +56,44 @@ typedef struct s_table
 	pthread_mutex_t	*forks;
 }	t_table;
 
-int				ft_atoi(const char *str);
+/* parsing.c */
+int				ft_atoi(const char *str, int *err);
+int				validate_args(int argc, char *argv[]);
+
+/* init.c */
 void			init_args(t_table *table, char *argv[], int argc);
 int				init_table(t_table *table);
 int				init_philos(t_table *table);
+
+/* cleanup.c */
 void			cleanup(t_table *table);
-int				validate_args(int argc, char *argv[]);
 int				join_threads(pthread_t *threads, int nb_philo);
-void			one_philo(t_table *table);
+
+/* simulation.c */
+void			*philo_routine(void *arg);
+int				run_simulation(t_table *table);
+void			handle_single_philo(t_table *table);
+
+/* actions.c */
 void			pick_up_forks(t_philo *philo);
 void			put_down_forks(t_philo *philo);
 void			philo_eat(t_philo *philo);
 void			philo_sleep(t_philo *philo);
 void			philo_think(t_philo *philo);
-void			custom_print_timestamp(t_philo *philo, const char *message);
 
+/* monitor.c */
+void			*monitor_routine(void *arg);
+
+/* time.c */
 long			get_time_ms(void);
 void			ft_usleep(long ms, t_table *table);
+
+/* state.c */
 int				is_stopped(t_table *table);
 void			set_stop(t_table *table);
+
+/* print.c */
+void			print_status(t_philo *philo, const char *message);
 void			print_death(t_philo *philo);
-void			*monitor_routine(void *arg);
 
 #endif

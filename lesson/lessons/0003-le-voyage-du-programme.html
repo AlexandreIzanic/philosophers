@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Leçon 03 — Le voyage du programme, de main() à cleanup()</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+</head>
+<body>
+
+<p class="eyebrow">Philosophers · Leçon 03 · Vue d'ensemble</p>
+<h1>Le voyage du programme, de <code>main()</code> à <code>cleanup()</code></h1>
+<p class="subtitle">La carte complète du déroulé — pour raconter ton propre code à l'oral, dans l'ordre.</p>
+
+<div class="callout">
+  <span class="label">Ce que tu sauras faire à la fin</span>
+  Retracer <em>chaque étape</em> de ta simulation, dans l'ordre chronologique, et
+  dire <b>pourquoi</b> elle existe. C'est exactement l'exercice de soutenance :
+  « déroule-moi ton programme ». Suite de la
+  <a href="0002-deadlock-ordre-des-fourchettes.html">leçon 02</a>.
+</div>
+
+<h2>1. Vue à vol d'oiseau : quatre phases</h2>
+<p>Ton programme n'a que quatre grandes phases. Retiens-les comme quatre mots ;
+tout le reste s'y accroche.</p>
+
+<ol class="flow">
+  <li><b>Vérifier &amp; préparer</b> — lire les arguments, allouer la mémoire,
+    créer tous les mutexes. <span class="fn">main → validate_args → init_*</span></li>
+  <li><b>Lancer</b> — créer un thread par philosophe, plus le thread surveillant.
+    <span class="fn">create_philo_threads</span></li>
+  <li><b>Vivre &amp; surveiller</b> — chaque philosophe boucle
+    manger→dormir→penser ; le monitor guette la mort.
+    <span class="fn">philo_routine · monitor_routine</span></li>
+  <li><b>Arrêter &amp; nettoyer</b> — lever le drapeau <code>stop</code>, rejoindre
+    les threads, détruire mutexes et libérer la mémoire.
+    <span class="fn">set_stop → join → cleanup</span></li>
+</ol>
+
+<div class="callout ok">
+  <span class="label">Le fil rouge</span>
+  Tout ce qui est <b>partagé</b> entre threads (l'affichage, l'heure du dernier
+  repas, le drapeau d'arrêt) est protégé par un <a href="../GLOSSARY.md">mutex</a>.
+  Repère les <code>lock</code>/<code>unlock</code> : ce sont tes
+  <a href="../GLOSSARY.md">sections critiques</a>.
+</div>
+
+<h2>2. Phase 1 — Vérifier et préparer</h2>
+<p>Dans <code>src/main.c</code>, <code>main()</code> est un simple portail à étages :
+si une étape échoue, on affiche <code>Error</code> et on sort proprement.</p>
+
+<pre><code>if (argc &lt; 5 || argc &gt; 6) ...            // bon nombre d'arguments ?
+if (validate_args(argc, argv) != 0) ...    // que des entiers &gt; 0 ?
+init_args(&amp;table, argv, argc);            // remplit la struct t_table
+if (init_table(&amp;table) != 0) ...          // malloc forks + mutexes globaux
+if (init_philos(&amp;table) != 0) ...         // malloc philos + leurs mutexes</code></pre>
+
+<ul class="rules">
+  <li><b>validate_args</b> (<code>utils.c</code>) : refuse le négatif, le zéro, le
+    non-numérique et le débordement d'<code>int</code>. Un garde à l'entrée.</li>
+  <li><b>init_table</b> (<code>init.c</code>) : alloue le tableau de fourchettes et
+    initialise chaque fourchette-mutex, plus <code>stop_mutex</code> et
+    <code>print_mutex</code>. Note <code>start_time = get_time_ms()</code> : l'heure
+    zéro de toute la simulation.</li>
+  <li><b>init_philos</b> (<code>init.c</code>) : chaque philosophe reçoit son
+    <code>id</code>, ses deux fourchettes voisines
+    (<code>left = forks[i]</code>, <code>right = forks[(i+1) % nb]</code>) et son
+    <code>meal_mutex</code>.</li>
+</ul>
+
+<div class="callout">
+  <span class="label">Détail qui fait la différence</span>
+  <code>right_fork = &amp;forks[(i + 1) % nb_philo]</code>. Le <b>modulo</b> referme
+  la table en cercle : le dernier philosophe partage sa droite avec le premier.
+  C'est ce cercle qui rend le <a href="0002-deadlock-ordre-des-fourchettes.html">deadlock</a>
+  possible… et ton ordre pair/impair qui l'évite.
+</div>
+
+<h2>3. Phase 2 — Lancer les threads</h2>
+<p><code>create_philo_threads</code> (<code>main.c</code>) fait naître la concurrence :</p>
+
+<pre><code>if (table->nb_philo == 1)
+    return (one_philo(table), 0);      // cas spécial : 1 seule fourchette
+start_philos(table, threads);          // un pthread_create par philosophe
+pthread_create(&amp;monitor, NULL, monitor_routine, table);  // le gardien
+join_threads(threads, nb_philo);       // attendre la fin de chaque philo
+pthread_join(monitor, NULL);           // puis du monitor</code></pre>
+
+<p>À partir du premier <code>pthread_create</code>, plusieurs fils s'exécutent
+<b>vraiment en parallèle</b>. C'est là que tout devient subtil : l'ordre exact
+n'est plus prévisible.<span> (Signatures :
+<a href="https://man7.org/linux/man-pages/man3/pthread_create.3.html">pthread_create(3)</a>.)</span></p>
+
+<div class="callout warn">
+  <span class="label">Le cas à 1 philosophe</span>
+  Un seul philosophe n'a qu'<em>une</em> fourchette : il ne peut jamais manger. Il
+  la prend, attend <code>time_to_die</code>, et meurt. C'est pour ça que
+  <code>one_philo</code> existe à part — sinon il resterait bloqué à attendre une
+  seconde fourchette qui n'arrivera jamais.
+</div>
+
+<h2>4. Phase 3a — La vie d'un philosophe</h2>
+<p><code>philo_routine</code> (<code>main.c</code>) est la boucle que <b>chaque</b>
+thread-philosophe exécute :</p>
+
+<pre><code>if (id % 2 == 0)
+    ft_usleep(time_to_eat / 2 + 1, table);   // décalage : évite la ruée
+while (!is_stopped(table))
+{
+    // stop si quota de repas atteint (sous meal_mutex)
+    philo_eat(philo);      // 2 fourchettes → manger → maj last_meal + compteur
+    if (is_stopped(table)) break;
+    philo_sleep(philo);    // dormir time_to_sleep
+    philo_think(philo);    // penser (puis reboucle)
+}</code></pre>
+
+<ul class="rules">
+  <li><b>Décalage initial</b> : les philosophes pairs attendent un demi-repas avant
+    de commencer. Ça désynchronise les prises de fourchettes et fluidifie la
+    danse.</li>
+  <li><b>philo_eat</b> (<code>messages.c</code>) : prend les deux fourchettes
+    (ordre pair/impair), écrit <code>last_meal_time</code> et incrémente
+    <code>nb_meals_eaten</code> <em>sous <code>meal_mutex</code></em>, puis relâche.</li>
+  <li><b>is_stopped</b> vérifié à chaque tour : dès que le monitor lève le drapeau,
+    la boucle s'arrête au lieu de tourner dans le vide.</li>
+</ul>
+
+<div class="callout ok">
+  <span class="label">Pourquoi <code>meal_mutex</code> ?</span>
+  <code>last_meal_time</code> et <code>nb_meals_eaten</code> sont <b>écrits</b> par
+  le philosophe et <b>lus</b> par le monitor. Deux threads, une donnée, une
+  écriture → <a href="../GLOSSARY.md">data race</a> sans mutex. Le
+  <code>meal_mutex</code> est le verrou qui rend ces accès sûrs.
+</div>
+
+<h2>5. Phase 3b — Le gardien : <code>monitor_routine</code></h2>
+<p>En parallèle, un seul thread surveille tout le monde
+(<code>monitor.c</code>) :</p>
+
+<pre><code>while (!is_stopped(table))
+{
+    for chaque philosophe i:
+        if (philo_is_dead(table, i))         // a-t-il dépassé time_to_die ?
+            { print_death(...); return; }    // annonce + stop
+    if (all_ate_enough(table))               // tous ont atteint le quota ?
+        { set_stop(table); return; }
+    usleep(500);                             // respire 0.5 ms
+}</code></pre>
+
+<p><code>philo_is_dead</code> compare <code>get_time_ms() - last_meal_time</code> à
+<code>time_to_die</code>, en lisant <code>last_meal_time</code> <em>sous
+<code>meal_mutex</code></em> — le même verrou que le philosophe. Les deux threads
+se passent la donnée proprement.</p>
+
+<div class="callout">
+  <span class="label">La règle des 10 ms du sujet</span>
+  La mort doit être annoncée en moins de 10 ms. Le monitor boucle toutes les
+  ~0.5 ms et <code>ft_usleep</code> se réveille tôt si <code>stop</code> est levé —
+  d'où la précision. On creusera ce timing dans une leçon dédiée.
+</div>
+
+<h2>6. Phase 4 — Arrêt propre et nettoyage</h2>
+<p>Un seul <code>stop = 1</code> (toujours écrit sous <code>stop_mutex</code>)
+suffit à faire sortir <b>toutes</b> les boucles. Ensuite :</p>
+
+<ol class="flow">
+  <li><b>join</b> — <code>join_threads</code> puis <code>pthread_join(monitor)</code>
+    attendent que chaque thread ait fini. Aucun fil zombie.</li>
+  <li><b>cleanup</b> (<code>init.c</code>) — <code>pthread_mutex_destroy</code> sur
+    chaque fourchette et chaque <code>meal_mutex</code>, puis sur
+    <code>stop_mutex</code>/<code>print_mutex</code>, enfin <code>free</code> des
+    deux tableaux. Zéro fuite.</li>
+</ol>
+
+<div class="callout warn">
+  <span class="label">Ordre imposé</span>
+  On <b>rejoint</b> les threads <em>avant</em> de détruire les mutexes. Détruire un
+  mutex qu'un thread vivant pourrait encore verrouiller = comportement indéfini.
+  Le <code>join</code> garantit que plus personne n'y touche.
+</div>
+
+<h2>7. Vérifie ta compréhension</h2>
+
+<div class="quiz" data-answer="2">
+  <div class="q">Dans quel ordre les phases s'enchaînent-elles&nbsp;?</div>
+  <button class="opt">Lancer, puis vérifier, puis nettoyer, puis vivre</button>
+  <button class="opt">Vivre, puis lancer, puis vérifier, puis nettoyer</button>
+  <button class="opt">Vérifier, puis lancer, puis vivre, puis nettoyer</button>
+  <div class="feedback"
+     data-correct="Exact : préparer d'abord, lancer les threads, les laisser vivre sous surveillance, puis tout démonter."
+     data-wrong="Non : on prépare (valider + init) AVANT de lancer les threads, et on nettoie en dernier."></div>
+</div>
+
+<div class="quiz" data-answer="0">
+  <div class="q">Pourquoi <code>join</code> les threads avant <code>cleanup</code>&nbsp;?</div>
+  <button class="opt">Sinon on détruirait des mutexes encore utilisés par un thread vivant</button>
+  <button class="opt">Sinon les philosophes mangeraient deux fois de suite</button>
+  <button class="opt">Sinon le start_time serait recalculé au mauvais moment</button>
+  <div class="feedback"
+     data-correct="Oui — détruire un mutex qu'un thread peut encore verrouiller est un comportement indéfini. Le join s'assure que tout le monde a fini."
+     data-wrong="Non : le vrai risque est de détruire/free des ressources qu'un thread encore vivant utilise. D'où le join d'abord."></div>
+</div>
+
+<h2>8. À toi de jouer</h2>
+<p>Ouvre tes fichiers côte à côte et suis le voyage <b>toi-même</b>, le doigt sur
+l'écran : <code>main.c</code> → <code>init.c</code> → <code>main.c</code>
+(threads) → <code>messages.c</code> (routine) → <code>monitor.c</code> →
+<code>init.c</code> (cleanup). Lance <code>./philo 4 410 200 200</code> et raconte
+à voix haute ce que fait chaque phase pendant que ça tourne. Si tu peux le dire
+sans lire, tu es prêt pour la soutenance.</p>
+
+<div class="source">
+  <span class="label">Source primaire à lire</span>
+  <p style="margin:0.3rem 0 0">
+    <a href="https://man7.org/linux/man-pages/man7/pthreads.7.html">man&nbsp;pthreads(7)</a>
+    — la vue d'ensemble officielle POSIX : création, jointure, ce que les threads
+    partagent (la mémoire) et ne partagent pas (la pile). Lis la section
+    « Thread&nbsp;IDs » et « Thread-safe functions » pour ancrer cette leçon.
+  </p>
+</div>
+
+<div class="ask">
+  <b>Ton prof, c'est moi.</b> Un maillon de la chaîne reste flou — « qui écrit
+  <code>start_time</code> ? », « le monitor voit-il un philosophe à moitié en
+  train de manger ? », « que se passe-t-il si deux meurent en même temps ? » —
+  pose-moi la question dans le chat. C'est comme ça qu'on progresse.
+</div>
+
+<div class="lesson-nav">
+  <span>← <a href="0002-deadlock-ordre-des-fourchettes.html">Leçon 02 — Deadlock</a></span>
+  <span>Suivant : la data race &amp; le mutex d'affichage →</span>
+</div>
+
+<p style="margin-top:1.5rem; font-size:0.9rem;">
+  Référence : <a href="../reference/carte-du-projet.html">Carte du projet</a> ·
+  <a href="../GLOSSARY.md">Glossaire</a>
+</p>
+
+<script src="../assets/quiz.js"></script>
+</body>
+</html>

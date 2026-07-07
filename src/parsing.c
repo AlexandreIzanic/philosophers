@@ -1,7 +1,7 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   main.c                                             :+:      :+:    :+:   */
+/*   parsing.c                                          :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: user <user@42.fr>                          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
@@ -11,27 +11,42 @@
 /* ************************************************************************** */
 #include "philo.h"
 
-int	main(int argc, char *argv[])
+/* Parse un entier positif. *err = 1 si invalide (vide, non-digit, > INT_MAX). */
+int	ft_atoi(const char *str, int *err)
 {
-	t_table	table;
+	int		i;
+	long	nb;
 
-	if (argc < 5 || argc > 6)
-		return (printf(RED "Error\nargs nb\n" RESET), 1);
-	if (validate_args(argc, argv) != 0)
-		return (printf(RED "Error\ninvalid args\n" RESET), 1);
-	init_args(&table, argv, argc);
-	if (init_table(&table) != 0)
-		return (printf(RED "Error\ninit\n" RESET), 1);
-	if (init_philos(&table) != 0)
+	i = 0;
+	nb = 0;
+	*err = 0;
+	if (str[i] == '+')
+		i++;
+	if (!str[i])
+		return (*err = 1, 0);
+	while (str[i])
 	{
-		cleanup(&table);
-		return (printf(RED "Error\ninit\n" RESET), 1);
+		if (str[i] < '0' || str[i] > '9')
+			return (*err = 1, 0);
+		nb = nb * 10 + (str[i] - '0');
+		if (nb > INT_MAX)
+			return (*err = 1, 0);
+		i++;
 	}
-	if (run_simulation(&table) != 0)
+	return ((int)nb);
+}
+
+int	validate_args(int argc, char *argv[])
+{
+	int	i;
+	int	err;
+
+	i = 1;
+	while (i < argc)
 	{
-		cleanup(&table);
-		return (printf(RED "Error\nthread creation\n" RESET), 1);
+		if (ft_atoi(argv[i], &err) < 1 || err)
+			return (-1);
+		i++;
 	}
-	cleanup(&table);
 	return (0);
 }

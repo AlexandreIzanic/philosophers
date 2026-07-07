@@ -1,7 +1,7 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   main.c                                             :+:      :+:    :+:   */
+/*   cleanup.c                                          :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: user <user@42.fr>                          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
@@ -11,27 +11,30 @@
 /* ************************************************************************** */
 #include "philo.h"
 
-int	main(int argc, char *argv[])
+int	join_threads(pthread_t *threads, int nb_philo)
 {
-	t_table	table;
+	int	i;
 
-	if (argc < 5 || argc > 6)
-		return (printf(RED "Error\nargs nb\n" RESET), 1);
-	if (validate_args(argc, argv) != 0)
-		return (printf(RED "Error\ninvalid args\n" RESET), 1);
-	init_args(&table, argv, argc);
-	if (init_table(&table) != 0)
-		return (printf(RED "Error\ninit\n" RESET), 1);
-	if (init_philos(&table) != 0)
-	{
-		cleanup(&table);
-		return (printf(RED "Error\ninit\n" RESET), 1);
-	}
-	if (run_simulation(&table) != 0)
-	{
-		cleanup(&table);
-		return (printf(RED "Error\nthread creation\n" RESET), 1);
-	}
-	cleanup(&table);
+	i = nb_philo;
+	while (i--)
+		pthread_join(threads[i], NULL);
 	return (0);
+}
+
+void	cleanup(t_table *table)
+{
+	int	i;
+
+	i = 0;
+	while (i < table->nb_philo)
+	{
+		pthread_mutex_destroy(&table->forks[i]);
+		if (table->philos)
+			pthread_mutex_destroy(&table->philos[i].meal_mutex);
+		i++;
+	}
+	pthread_mutex_destroy(&table->stop_mutex);
+	pthread_mutex_destroy(&table->print_mutex);
+	free(table->forks);
+	free(table->philos);
 }

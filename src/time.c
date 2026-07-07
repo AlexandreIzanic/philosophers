@@ -1,7 +1,7 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   main.c                                             :+:      :+:    :+:   */
+/*   time.c                                             :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: user <user@42.fr>                          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
@@ -11,27 +11,23 @@
 /* ************************************************************************** */
 #include "philo.h"
 
-int	main(int argc, char *argv[])
+long	get_time_ms(void)
 {
-	t_table	table;
+	struct timeval	tv;
 
-	if (argc < 5 || argc > 6)
-		return (printf(RED "Error\nargs nb\n" RESET), 1);
-	if (validate_args(argc, argv) != 0)
-		return (printf(RED "Error\ninvalid args\n" RESET), 1);
-	init_args(&table, argv, argc);
-	if (init_table(&table) != 0)
-		return (printf(RED "Error\ninit\n" RESET), 1);
-	if (init_philos(&table) != 0)
+	gettimeofday(&tv, NULL);
+	return (tv.tv_sec * 1000L + tv.tv_usec / 1000);
+}
+
+void	ft_usleep(long ms, t_table *table)
+{
+	long	start;
+
+	start = get_time_ms();
+	while (get_time_ms() - start < ms)
 	{
-		cleanup(&table);
-		return (printf(RED "Error\ninit\n" RESET), 1);
+		if (is_stopped(table))
+			break ;
+		usleep(200);
 	}
-	if (run_simulation(&table) != 0)
-	{
-		cleanup(&table);
-		return (printf(RED "Error\nthread creation\n" RESET), 1);
-	}
-	cleanup(&table);
-	return (0);
 }

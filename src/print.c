@@ -11,52 +11,36 @@
 /* ************************************************************************** */
 #include "philo.h"
 
-long	get_time_ms(void)
+/* Affiche une ligne d'etat brute (appele sous print_mutex deja verrouille). */
+static void	log_line(t_philo *philo, const char *message)
 {
-	struct timeval	tv;
-
-	gettimeofday(&tv, NULL);
-	return (tv.tv_sec * 1000L + tv.tv_usec / 1000);
+	printf("%ld %d %s\n",
+		get_time_ms() - philo->table->start_time, philo->id, message);
 }
 
-int	is_stopped(t_table *table)
-{
-	int	value;
-
-	pthread_mutex_lock(&table->stop_mutex);
-	value = table->stop;
-	pthread_mutex_unlock(&table->stop_mutex);
-	return (value);
-}
-
-void	set_stop(t_table *table)
-{
-	pthread_mutex_lock(&table->stop_mutex);
-	table->stop = 1;
-	pthread_mutex_unlock(&table->stop_mutex);
-}
-
-void	ft_usleep(long ms, t_table *table)
-{
-	long	start;
-
-	start = get_time_ms();
-	while (get_time_ms() - start < ms)
-	{
-		if (is_stopped(table))
-			break ;
-		usleep(200);
-	}
-}
-
-void	custom_print_timestamp(t_philo *philo, const char *message)
+void	print_status(t_philo *philo, const char *message)
 {
 	t_table	*table;
 
 	table = philo->table;
 	pthread_mutex_lock(&table->print_mutex);
 	if (!is_stopped(table))
-		printf("%ld %d %s\n",
-			get_time_ms() - table->start_time, philo->id, message);
+		log_line(philo, message);
+	pthread_mutex_unlock(&table->print_mutex);
+}
+
+/*
+** Affiche la mort d'un philosophe puis leve le flag stop, le tout sous
+** print_mutex pour qu'aucun autre thread ne puisse afficher apres "died".
+*/
+void	print_death(t_philo *philo)
+{
+	t_table	*table;
+
+	table = philo->table;
+	pthread_mutex_lock(&table->print_mutex);
+	if (!is_stopped(table))
+		log_line(philo, MSG_DIED);
+	set_stop(table);
 	pthread_mutex_unlock(&table->print_mutex);
 }

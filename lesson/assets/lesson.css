@@ -135,6 +135,25 @@ pre code { background: none; padding: 0; font-size: 0.85rem; line-height: 1.5; }
 }
 .source .label { font-variant: small-caps; letter-spacing: 0.06em; color: var(--muted); font-size: 0.8rem; }
 
+/* ---- Flow / timeline (trace du déroulé d'un programme) ---- */
+.flow { list-style: none; counter-reset: step; padding-left: 0; margin: 1.4rem 0; }
+.flow > li {
+  position: relative; padding: 0.55rem 0 0.9rem 3rem;
+  border-left: 2px solid var(--rule); margin-left: 1rem;
+}
+.flow > li:last-child { border-left-color: transparent; }
+.flow > li::before {
+  counter-increment: step; content: counter(step);
+  position: absolute; left: -1rem; top: 0.4rem;
+  width: 2rem; height: 2rem; border-radius: 50%;
+  background: var(--accent); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-family: "SF Mono", Menlo, monospace; font-size: 0.9rem; font-weight: 600;
+}
+.flow > li b { color: var(--accent2); }
+.flow .fn { font-family: "SF Mono", Menlo, monospace; font-size: 0.85em;
+  background: var(--code-bg); padding: 0.05em 0.35em; border-radius: 3px; }
+
 @media print {
   body { margin: 0; max-width: none; }
   .quiz .opt { break-inside: avoid; }

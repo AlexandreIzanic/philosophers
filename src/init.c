@@ -13,12 +13,14 @@
 
 void	init_args(t_table *table, char *argv[], int argc)
 {
-	table->nb_philo = ft_atoi(argv[1]);
-	table->time_to_die = ft_atoi(argv[2]);
-	table->time_to_eat = ft_atoi(argv[3]);
-	table->time_to_sleep = ft_atoi(argv[4]);
+	int	err;
+
+	table->nb_philo = ft_atoi(argv[1], &err);
+	table->time_to_die = ft_atoi(argv[2], &err);
+	table->time_to_eat = ft_atoi(argv[3], &err);
+	table->time_to_sleep = ft_atoi(argv[4], &err);
 	if (argc == 6)
-		table->nb_meals = ft_atoi(argv[5]);
+		table->nb_meals = ft_atoi(argv[5], &err);
 	else
 		table->nb_meals = -1;
 }
@@ -60,9 +62,6 @@ int	init_philos(t_table *table)
 	{
 		table->philos[i].id = i + 1;
 		table->philos[i].nb_meals_eaten = 0;
-		table->philos[i].max_meals = table->nb_meals;
-		table->philos[i].time_to_eat = table->time_to_eat;
-		table->philos[i].time_to_sleep = table->time_to_sleep;
 		table->philos[i].last_meal_time = table->start_time;
 		table->philos[i].table = table;
 		table->philos[i].left_fork = &table->forks[i];
@@ -71,22 +70,4 @@ int	init_philos(t_table *table)
 		i++;
 	}
 	return (0);
-}
-
-void	cleanup(t_table *table)
-{
-	int	i;
-
-	i = 0;
-	while (i < table->nb_philo)
-	{
-		pthread_mutex_destroy(&table->forks[i]);
-		if (table->philos)
-			pthread_mutex_destroy(&table->philos[i].meal_mutex);
-		i++;
-	}
-	pthread_mutex_destroy(&table->stop_mutex);
-	pthread_mutex_destroy(&table->print_mutex);
-	free(table->forks);
-	free(table->philos);
 }

@@ -11,26 +11,7 @@
 /* ************************************************************************** */
 #include "philo.h"
 
-/*
-** Affiche la mort d'un philosophe puis lève le flag stop, le tout sous
-** print_mutex pour qu'aucun autre thread ne puisse afficher après "has died".
-*/
-void	print_death(t_philo *philo)
-{
-	t_table	*table;
-
-	table = philo->table;
-	pthread_mutex_lock(&table->print_mutex);
-	if (!is_stopped(table))
-		printf("%ld %d %s\n",
-			get_time_ms() - table->start_time, philo->id, MSG_DIED);
-	pthread_mutex_lock(&table->stop_mutex);
-	table->stop = 1;
-	pthread_mutex_unlock(&table->stop_mutex);
-	pthread_mutex_unlock(&table->print_mutex);
-}
-
-/* Un philosophe est mort s'il n'a pas mangé depuis plus de time_to_die ms. */
+/* Un philosophe est mort s'il n'a pas mange depuis plus de time_to_die ms. */
 static int	philo_is_dead(t_table *table, int i)
 {
 	long	since_last_meal;

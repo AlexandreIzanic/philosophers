@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Leçon 04 — Pourquoi le print_mutex existe</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+</head>
+<body>
+
+<p class="eyebrow">Philosophers · Leçon 04 · Data race</p>
+<h1>Pourquoi le <code>print_mutex</code> existe</h1>
+<p class="subtitle">Le deuxième dragon : l'affichage partagé. Deux raisons — dont une que les correcteurs adorent.</p>
+
+<div class="callout">
+  <span class="label">Ce que tu sauras faire à la fin</span>
+  Défendre <em>à l'oral</em> deux choses : (1) pourquoi <code>printf</code> depuis
+  plusieurs threads est dangereux, et (2) l'astuce vraiment maligne de ton code —
+  garder <code>print_mutex</code> verrouillé <b>pendant</b> qu'on lève
+  <code>stop</code>, pour qu'aucun message ne s'affiche après <code>died</code>.
+  Suite du <a href="0003-le-voyage-du-programme.html">voyage (leçon 03)</a>.
+</div>
+
+<h2>1. L'écran est une ressource partagée</h2>
+<p>Tes <code>nb_philo</code> threads écrivent tous sur la <b>même</b> sortie
+standard. La sortie standard, c'est comme une fourchette : une ressource commune.
+Sans coordination, deux threads peuvent écrire « en même temps ».</p>
+
+<p>Une ligne de log ici, c'est en réalité plusieurs morceaux :
+<code>timestamp</code>, <code>id</code>, <code>message</code>, puis le retour à la
+ligne. Si deux threads s'entremêlent, tu peux obtenir&nbsp;:</p>
+
+<pre><code>42 3 is eati42 5 is thinking
+ng</code></pre>
+
+<p>C'est une <a href="../GLOSSARY.md">data race</a> sur l'affichage : deux threads
+touchent une ressource commune sans verrou, et le résultat est illisible et
+<em>non reproductible</em>.<span> (Sortie standard partagée :
+<a href="https://man7.org/linux/man-pages/man3/printf.3.html">printf(3)</a>.)</span></p>
+
+<h2>2. La parade : sérialiser avec un mutex</h2>
+<p>Ton <code>custom_print_timestamp</code> (<code>src/print.c</code>) encadre
+l'affichage d'un mutex — une <a href="../GLOSSARY.md">section critique</a> :</p>
+
+<pre><code>void	custom_print_timestamp(t_philo *philo, const char *message)
+{
+	t_table	*table = philo->table;
+
+	pthread_mutex_lock(&amp;table->print_mutex);      // ← un seul thread entre
+	if (!is_stopped(table))
+		printf("%ld %d %s\n",
+			get_time_ms() - table->start_time, philo->id, message);
+	pthread_mutex_unlock(&amp;table->print_mutex);    // ← le suivant peut entrer
+}</code></pre>
+
+<p>Tant qu'un thread tient <code>print_mutex</code>, les autres <em>attendent</em>
+à la porte. Chaque ligne sort donc <b>entière, d'un bloc</b>, jamais coupée.</p>
+
+<div class="callout">
+  <span class="label">Nuance honnête (pour ne pas dire de bêtise à l'oral)</span>
+  Sur glibc, un <code>printf</code> unique est déjà protégé en interne : il ne
+  <em>plantera</em> pas. Mais (a) le standard ne te garantit pas ce comportement
+  partout, et surtout (b) ce n'est pas la seule raison du mutex ici. La vraie
+  raison qui suit est bien plus forte.
+</div>
+
+<h2>3. La vraie raison : rien ne s'affiche après <code>died</code></h2>
+<p>Le sujet est strict : <b>une fois un philosophe mort, plus aucun message ne
+doit s'afficher.</b> Pas de « is eating » en retard après le « died ». Comment ton
+code le garantit-il&nbsp;? Regarde <code>print_death</code>
+(<code>src/monitor.c</code>) :</p>
+
+<pre><code>void	print_death(t_philo *philo)
+{
+	t_table	*table = philo->table;
+
+	pthread_mutex_lock(&amp;table->print_mutex);      // ← prend l'affichage
+	if (!is_stopped(table))
+		printf("%ld %d %s\n",
+			get_time_ms() - table->start_time, philo->id, MSG_DIED);
+	pthread_mutex_lock(&amp;table->stop_mutex);
+	table->stop = 1;                                // ← lève stop…
+	pthread_mutex_unlock(&amp;table->stop_mutex);
+	pthread_mutex_unlock(&amp;table->print_mutex);    // ← …AVANT de rendre l'affichage
+}</code></pre>
+
+<div class="callout ok">
+  <span class="label">Le déclic à retenir</span>
+  <code>print_death</code> écrit <code>died</code> <b>et</b> lève <code>stop</code>
+  <b>sans jamais lâcher <code>print_mutex</code> entre les deux</b>. Donc aucun
+  philosophe ne peut se glisser pour afficher un message pendant cet intervalle.
+  Quand un philosophe obtient enfin <code>print_mutex</code>, il teste
+  <code>if (!is_stopped(table))</code> → c'est déjà vrai → il n'imprime rien.
+  <b><code>died</code> est forcément la dernière ligne.</b>
+</div>
+
+<p>C'est une coordination à <b>deux</b> verrous : <code>print_mutex</code> protège
+l'écran, <code>stop_mutex</code> protège le drapeau, et les tenir imbriqués crée
+une garantie que ni l'un ni l'autre ne donnerait seul.</p>
+
+<h2>4. Vérifie ta compréhension</h2>
+
+<div class="quiz" data-answer="1">
+  <div class="q">Sans <code>print_mutex</code>, le symptôme le plus visible est&nbsp;:</div>
+  <button class="opt">Le programme se fige et plus rien ne s'affiche jamais</button>
+  <button class="opt">Des lignes de log mélangées, coupées au milieu d'un mot</button>
+  <button class="opt">Une erreur de segmentation dès le premier repas</button>
+  <div class="feedback"
+     data-correct="Exact — c'est la data race sur l'affichage : les lignes s'entremêlent. Le figement, lui, c'est le deadlock (leçon 02)."
+     data-wrong="Non : le figement = deadlock, le crash = autre chose. Ici la ressource partagée non protégée, c'est l'écran → lignes mélangées."></div>
+</div>
+
+<div class="quiz" data-answer="2">
+  <div class="q">Pourquoi <code>print_death</code> garde-t-il <code>print_mutex</code> pendant qu'il lève <code>stop</code>&nbsp;?</div>
+  <button class="opt">Pour afficher la mort plus vite que les autres messages</button>
+  <button class="opt">Parce que détruire un mutex verrouillé est interdit</button>
+  <button class="opt">Pour qu'aucun message ne puisse s'afficher après « died »</button>
+  <div class="feedback"
+     data-correct="Oui — tant que le mutex est tenu, personne d'autre ne peut imprimer ; le temps que stop soit levé, la porte reste fermée. « died » reste la dernière ligne."
+     data-wrong="Non : ni la vitesse ni la destruction n'entrent en jeu ici. Le but est d'empêcher tout affichage entre « died » et la levée de stop."></div>
+</div>
+
+<h2>5. À toi de jouer</h2>
+<p>Deux expériences dans <code>src/print.c</code> :</p>
+<ul class="rules">
+  <li><b>Expérience 1</b> — commente les <code>lock</code>/<code>unlock</code> de
+    <code>custom_print_timestamp</code>, recompile, lance
+    <code>./philo 5 800 200 200</code> avec beaucoup de philosophes. Observe les
+    lignes qui se mélangent. Puis remets le mutex.</li>
+  <li><b>Expérience 2 (mentale)</b> — imagine qu'on relâche <code>print_mutex</code>
+    <em>avant</em> de lever <code>stop</code> dans <code>print_death</code>. Quel
+    message pourrait alors se faufiler après <code>died</code>&nbsp;? Sache le
+    raconter — c'est une question de correcteur classique.</li>
+</ul>
+
+<div class="source">
+  <span class="label">Source primaire à lire</span>
+  <p style="margin:0.3rem 0 0">
+    <a href="https://man7.org/linux/man-pages/man3/pthread_mutex_lock.3p.html">man&nbsp;pthread_mutex_lock(3)</a>
+    — la sémantique exacte du verrou : un seul détenteur à la fois, les autres
+    bloquent jusqu'au <code>unlock</code>. C'est précisément ce qui sérialise ton
+    affichage. Relis aussi le chapitre « Mutual Exclusion » du
+    <a href="https://greenteapress.com/wp/semaphores/">Little Book of Semaphores</a>.
+  </p>
+</div>
+
+<div class="ask">
+  <b>Ton prof, c'est moi.</b> Un doute — « et si deux philosophes meurent au même
+  instant ? », « le <code>is_stopped</code> dans <code>print_death</code> sert à
+  quoi puisqu'on vient de vérifier ? », « faut-il un mutex par message ou un
+  seul ? » — pose-moi la question dans le chat.
+</div>
+
+<div class="lesson-nav">
+  <span>← <a href="0003-le-voyage-du-programme.html">Leçon 03 — Le voyage</a></span>
+  <span>Suivant : le monitor &amp; la précision du timing →</span>
+</div>
+
+<p style="margin-top:1.5rem; font-size:0.9rem;">
+  Référence : <a href="../reference/carte-du-projet.html">Carte du projet</a> ·
+  <a href="../GLOSSARY.md">Glossaire</a>
+</p>
+
+<script src="../assets/quiz.js"></script>
+</body>
+</html>

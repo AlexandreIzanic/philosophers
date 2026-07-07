@@ -1,7 +1,7 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   main.c                                             :+:      :+:    :+:   */
+/*   state.c                                            :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: user <user@42.fr>                          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
@@ -11,27 +11,19 @@
 /* ************************************************************************** */
 #include "philo.h"
 
-int	main(int argc, char *argv[])
+int	is_stopped(t_table *table)
 {
-	t_table	table;
+	int	value;
 
-	if (argc < 5 || argc > 6)
-		return (printf(RED "Error\nargs nb\n" RESET), 1);
-	if (validate_args(argc, argv) != 0)
-		return (printf(RED "Error\ninvalid args\n" RESET), 1);
-	init_args(&table, argv, argc);
-	if (init_table(&table) != 0)
-		return (printf(RED "Error\ninit\n" RESET), 1);
-	if (init_philos(&table) != 0)
-	{
-		cleanup(&table);
-		return (printf(RED "Error\ninit\n" RESET), 1);
-	}
-	if (run_simulation(&table) != 0)
-	{
-		cleanup(&table);
-		return (printf(RED "Error\nthread creation\n" RESET), 1);
-	}
-	cleanup(&table);
-	return (0);
+	pthread_mutex_lock(&table->stop_mutex);
+	value = table->stop;
+	pthread_mutex_unlock(&table->stop_mutex);
+	return (value);
+}
+
+void	set_stop(t_table *table)
+{
+	pthread_mutex_lock(&table->stop_mutex);
+	table->stop = 1;
+	pthread_mutex_unlock(&table->stop_mutex);
 }

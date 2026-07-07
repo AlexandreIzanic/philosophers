@@ -5,29 +5,34 @@
 - Étudiant 42 (login: aizanic). Projet : Philosophers (mandatory).
 - Apprend mieux ancré dans **son propre code** (il a déjà un squelette).
 
-## État du code (au 2026-07-07)
-Fichiers : `src/main.c`, `src/messages.c`, `src/utils.c`, `src/print.c`, `src/philo.h`.
+## État du code (au 2026-07-07, MAJ après L0003)
+Fichiers : `src/main.c`, `src/init.c`, `src/messages.c`, `src/monitor.c`,
+`src/print.c`, `src/utils.c`, `src/philo.h`.
 
-Ce qui marche :
-- Parsing des arguments + `ft_atoi` avec garde INT_MAX/MIN.
-- Création d'un thread par philosophe, mutex par fourchette.
-- Ordre pair/impair de prise des fourchettes (anti-deadlock) — déjà présent.
-- Horodatage relatif via `start_time()` (static) + `gettimeofday`.
+**Le code est maintenant quasi complet** — l'utilisateur a corrigé la plupart des
+manques listés dans la version précédente de ces notes. Ce qui est en place :
+- Parsing + `ft_atoi` (garde INT_MAX/MIN) + `validate_args`.
+- Un thread par philo, un mutex par fourchette, ordre pair/impair anti-deadlock.
+- **Monitor** (`monitor_routine`, `philo_is_dead`, `all_ate_enough`) : détecte la
+  mort ET la fin par quota de repas.
+- `print_mutex`, `meal_mutex`, `stop_mutex` → data races traitées.
+- `last_meal_time` + `nb_meals_eaten` maj sous `meal_mutex`.
+- `ft_usleep` avec réveil anticipé sur `stop` ; `get_time_ms`.
+- `cleanup` : destroy des mutexes + free.
+- `one_philo` : logique dédiée (prend 1 fourchette, attend, meurt).
 
-Bugs / manques à traiter (futures leçons) :
-1. **Aucun monitor de mort** : rien ne vérifie `time_to_die`. Le sujet l'exige.
-2. **`last_meal_time` jamais mis à jour** et `is_dead` jamais utilisé.
-3. **Data race sur `printf`** : pas de mutex d'affichage → sorties mélangées.
-4. **Data race sur `nb_meals_eaten`** : lu/écrit sans protection.
-5. La condition de boucle `philo_routine` (`< max_meals || max_meals == 0`)
-   ne s'arrête jamais proprement et n'écoute pas la mort.
-6. `usleep` long pour manger/dormir → mort détectée en retard (précision).
-7. Pas de `pthread_mutex_destroy` ni de `free` en fin de programme (fuites).
-8. `one_philo` fait un `usleep` bloquant au lieu d'une vraie logique.
+À creuser/durcir (futures leçons — plus de la consolidation que de la
+construction) :
+- Vérifier l'absence de data race à l'outil : `valgrind --tool=helgrind`
+  (pas encore de ressource dédiée — gap dans RESOURCES.md).
+- Précision du timing / règle des 10 ms (zoom sur `ft_usleep` + monitor).
+- Expliquer POURQUOI chaque mutex (valeur soutenance), même s'ils existent déjà.
 
 ## Design system du cours (canonique)
 - Feuille de style unique : `assets/lesson.css` (classes : .callout, .callout.ok,
-  .callout.warn, .rules, .dragons, .source, .ask, .lesson-nav, .quiz).
+  .callout.warn, .rules, .dragons, .source, .ask, .lesson-nav, .quiz, .flow).
+- `.flow` = timeline numérotée (ajoutée en L0003) pour tracer un déroulé étape
+  par étape. Réutilisable.
 - Quiz réutilisable : `assets/quiz.js` (div.quiz[data-answer], .opt, .feedback).
 - Glossaire : `GLOSSARY.md` (markdown). Carte : `reference/carte-du-projet.html`.
 - NE PAS réintroduire style.css ni glossary.html (doublons supprimés le 2026-07-07
@@ -36,7 +41,9 @@ Bugs / manques à traiter (futures leçons) :
 ## Plan de progression
 - L0001 : orientation — les deux dragons (deadlock / mort). ✅ fait.
 - L0002 : deadlock & ordre des fourchettes (ancré dans son code). ✅ fait.
-- L0003 (prochaine) : data race + mutex d'affichage (le `printf` non protégé).
-- Puis : le monitor de mort (thread superviseur + last_meal_time protégé).
-- Puis : arrêt propre de la simulation (flag stop protégé).
-- Puis : précision du timing (ft_usleep) + cleanup/destroy/free.
+- L0003 : voyage du programme, de main() à cleanup() (vue d'ensemble). ✅ fait.
+- L0004 : data race & POURQUOI le print_mutex — 2 raisons, dont l'astuce
+  print_mutex tenu pendant la levée de stop (rien après « died »). ✅ fait.
+- L0005 (candidate) : zoom monitor + précision timing (règle 10 ms, ft_usleep).
+- Puis : vérifier à l'outil avec helgrind (trouver une ressource d'abord).
+- Puis : arrêt propre déjà en place → le durcir / cas limites de soutenance.
