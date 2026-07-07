@@ -7,3 +7,23 @@
 threads == work on multiple things concurently
 
 concurrent programming
+
+
+task synchronisation
+
+## usage
+./philo [nb_philo] [time_to_die] [time_to_eat] [time_to_sleep] [optional_nb_meal]
+
+
+## mutex example 
+
+    pthread_mutex_t my_mutex;
+
+    pthrea_mutex_init(&my_mutex);
+
+    void    func()
+    {
+        pthread_mutex_lock(&my_mutex)
+        ...
+        pthread_mutex_unlock(&my_mutex)
+    }

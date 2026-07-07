@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Leçon 01 — Le problème des philosophes</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+</head>
+<body>
+
+<p class="eyebrow">Philosophers · Leçon 01 · Orientation</p>
+<h1>Le dîner des philosophes</h1>
+<p class="subtitle">Le vrai problème que ton programme doit résoudre — et pourquoi il est piégeux.</p>
+
+<div class="callout">
+  <span class="label">Ce que tu sauras faire à la fin</span>
+  Décrire la scène des philosophes, nommer les <b>deux façons dont la simulation
+  peut échouer</b>, et dire quelle pièce de ton code actuel manque. C'est le socle
+  de tout le reste du projet.
+</div>
+
+<h2>1. La scène</h2>
+<p>
+Des philosophes sont assis autour d'une table ronde. Entre chaque paire de voisins,
+il y a <b>une seule fourchette</b>. Donc : autant de fourchettes que de philosophes.
+Chaque philosophe ne sait faire que trois choses, en boucle :
+</p>
+
+<ul class="rules">
+  <li><b>manger</b> — mais il lui faut <b>deux</b> fourchettes : celle de gauche <em>et</em> celle de droite ;</li>
+  <li><b>dormir</b> — pendant <code>time_to_sleep</code> ms ;</li>
+  <li><b>penser</b> — puis il essaie de re-manger.</li>
+</ul>
+
+<p>
+Le drame vient de la fourchette partagée : ton voisin de gauche et toi convoitez la
+même. Vous ne pouvez pas manger <em>en même temps</em> avec elle. C'est exactement
+le rôle d'un <a href="../GLOSSARY.md">mutex</a> : une fourchette = un mutex, et
+« prendre la fourchette » = <code>pthread_mutex_lock</code>.
+</p>
+
+<div class="callout ok">
+  <span class="label">La traduction informatique</span>
+  1 philosophe = 1 <b>thread</b>. 1 fourchette = 1 <b>mutex</b>. « Prendre une
+  fourchette » = verrouiller le mutex. « Reposer » = le déverrouiller. Manger =
+  tenir <b>les deux</b> verrous en même temps.
+</div>
+
+<h2>2. La contrainte qui rend tout dur : le temps</h2>
+<p>
+Un philosophe qui n'a pas <b>commencé un repas</b> depuis <code>time_to_die</code>
+millisecondes… <b>meurt</b>. Et à la seconde où un seul meurt, toute la simulation
+doit s'arrêter net et l'annoncer. Ton programme n'est donc pas juste « faire manger
+des gens » : c'est <b>garder tout le monde en vie</b> malgré une ressource rare
+(les fourchettes) et une horloge impitoyable.
+</p>
+
+<h2>3. Les deux dragons</h2>
+<p>Il n'y a que deux manières de rater. Apprends leurs noms — un correcteur te les demandera.</p>
+
+<div class="dragons">
+  <div class="dragon">
+    <h3>Deadlock (interblocage)</h3>
+    <p>
+    Tous les philosophes prennent leur fourchette gauche <em>en même temps</em>.
+    Personne n'a de fourchette droite disponible. Chacun attend son voisin…
+    <b>pour toujours</b>. Le programme se fige, plus aucune ligne ne s'affiche.
+    </p>
+  </div>
+  <div class="dragon">
+    <h3>Mort / famine</h3>
+    <p>
+    Un philosophe attend trop longtemps ses fourchettes et dépasse
+    <code>time_to_die</code>. Il meurt. Souvent parce que l'ordre de prise des
+    fourchettes est mal pensé, ou que personne ne surveille l'heure.
+    </p>
+  </div>
+</div>
+
+<p>
+Tout le projet consiste à <b>tuer ces deux dragons à la fois</b> : ne jamais se
+figer (pas de deadlock) <em>et</em> ne jamais laisser quelqu'un dépasser l'heure
+(pas de mort injuste). Ton code actuel gère déjà un morceau du premier : dans
+<code>src/messages.c</code>, les philosophes pairs prennent la fourchette droite
+d'abord, les impairs la gauche — c'est une vraie stratégie anti-deadlock. On y
+reviendra.
+</p>
+
+<h2>4. Ce qui manque dans ton code (le fil rouge des prochaines leçons)</h2>
+<div class="callout warn">
+  <span class="label">Diagnostic</span>
+  Ta boucle <code>philo_routine</code> fait <em>manger / penser / dormir</em> à
+  l'infini, mais <b>personne ne surveille l'heure</b>. Les champs
+  <code>is_dead</code> et <code>last_meal_time</code> existent dans ta struct…
+  et ne sont jamais utilisés. Il n'y a donc, aujourd'hui, <b>aucun moyen pour un
+  philosophe de mourir</b> correctement. C'est le <a href="../GLOSSARY.md">monitor</a>
+  qui manque — ce sera une leçon à part entière.
+</div>
+
+<h2>5. Vérifie ta compréhension</h2>
+
+<div class="quiz" data-answer="1">
+  <div class="q">Un philosophe a besoin de combien de fourchettes pour manger ?</div>
+  <button class="opt">Une seule fourchette</button>
+  <button class="opt">Deux fourchettes voisines</button>
+  <button class="opt">Toutes les fourchettes</button>
+  <div class="feedback"
+       data-correct="Oui — gauche ET droite, d'où la compétition avec les voisins."
+       data-wrong="Il faut ses DEUX voisines : gauche et droite en même temps."></div>
+</div>
+
+<div class="quiz" data-answer="2">
+  <div class="q">Chacun prend sa fourchette gauche et attend la droite sans jamais la lâcher. C'est…</div>
+  <button class="opt">une data race entre threads</button>
+  <button class="opt">une mort par pure famine</button>
+  <button class="opt">un deadlock, tout se fige</button>
+  <div class="feedback"
+       data-correct="Exact — attente circulaire, personne ne cède : interblocage."
+       data-wrong="Non : ici tout le monde attend en cercle et rien ne bouge — c'est un deadlock."></div>
+</div>
+
+<div class="quiz" data-answer="0">
+  <div class="q">Le compteur <code>time_to_die</code> repart à zéro à quel moment ?</div>
+  <button class="opt">au début du dernier repas</button>
+  <button class="opt">à la fin du gros dodo.</button>
+  <button class="opt">quand il pense fort</button>
+  <div class="feedback"
+       data-correct="Oui — c'est le début du dernier repas qui compte, pas la fin."
+       data-wrong="Non : le compte repart au DÉBUT du dernier repas du philosophe."></div>
+</div>
+
+<div class="source">
+  <span class="label">Source primaire à lire</span>
+  <p style="margin:0.3rem 0 0">
+    <a href="https://greenteapress.com/wp/semaphores/">The Little Book of Semaphores</a>
+    — Allen B. Downey (gratuit). Va au chapitre <b>« Dining Philosophers »</b> :
+    il pose le problème et prouve pourquoi le deadlock arrive. La meilleure source
+    pour ce projet.
+  </p>
+</div>
+
+<div class="ask">
+  <b>Ton prof, c'est moi.</b> Bloqué sur un mot, une ligne de ton code, ou tu veux
+  que je te fasse un schéma de la table ? Demande-moi — pose autant de questions de
+  suivi que tu veux avant de passer à la leçon suivante.
+</div>
+
+<div class="lesson-nav">
+  <span>Leçon 01 — Le problème des philosophes</span>
+  <span>Suivant : <a href="0002-deadlock-ordre-des-fourchettes.html">Deadlock &amp; ordre des fourchettes</a> →</span>
+</div>
+
+<script src="../assets/quiz.js"></script>
+</body>
+</html>

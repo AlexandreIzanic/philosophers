@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Référence — Carte du projet Philosophers</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+<style>
+  .map { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+  .card { border:1px solid var(--rule); border-radius:6px; padding:0.7rem 1rem; background:#fff; }
+  .card h3 { margin:0.1rem 0 0.4rem; color:var(--accent2); font-size:1rem; }
+  .card p, .card li { font-size:0.92rem; }
+  table { border-collapse:collapse; width:100%; font-size:0.92rem; margin:0.5rem 0; }
+  th,td { border:1px solid var(--rule); padding:0.35rem 0.55rem; text-align:left; }
+  th { background:var(--code-bg); }
+  @media (max-width:600px){ .map{ grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+
+<p class="eyebrow">Philosophers · Référence</p>
+<h1>Carte du projet</h1>
+<p class="subtitle">Feuille à garder sous les yeux. Compressée pour révision rapide.</p>
+
+<h2>Ligne de commande</h2>
+<pre><code>./philo nb_philo time_to_die time_to_eat time_to_sleep [nb_repas]
+              (tous les temps sont en millisecondes)</code></pre>
+<table>
+  <tr><th>Argument</th><th>Sens</th></tr>
+  <tr><td><code>nb_philo</code></td><td>nombre de philosophes ET de fourchettes</td></tr>
+  <tr><td><code>time_to_die</code></td><td>ms sans manger avant la mort (depuis le début du dernier repas)</td></tr>
+  <tr><td><code>time_to_eat</code></td><td>ms passées à manger (2 fourchettes tenues)</td></tr>
+  <tr><td><code>time_to_sleep</code></td><td>ms passées à dormir</td></tr>
+  <tr><td><code>[nb_repas]</code></td><td>optionnel : stop quand tous ont mangé n fois</td></tr>
+</table>
+
+<h2>Les correspondances clés</h2>
+<div class="map">
+  <div class="card"><h3>Philosophe → Thread</h3>
+    <p><code>pthread_create</code> lance un fil par philosophe ; <code>pthread_join</code> attend leur fin.</p></div>
+  <div class="card"><h3>Fourchette → Mutex</h3>
+    <p><code>pthread_mutex_lock</code> = prendre ; <code>unlock</code> = reposer. Manger = tenir 2 verrous.</p></div>
+  <div class="card"><h3>Rester en vie → Monitor</h3>
+    <p>Une surveillance continue de <code>last_meal_time</code> contre <code>time_to_die</code>.</p></div>
+  <div class="card"><h3>Affichage propre → Mutex print</h3>
+    <p>Un mutex dédié pour que deux threads n'écrivent pas une ligne par-dessus l'autre.</p></div>
+</div>
+
+<h2>Les deux dragons</h2>
+<table>
+  <tr><th>Échec</th><th>Cause</th><th>Parade classique</th></tr>
+  <tr><td><b>Deadlock</b></td><td>tous prennent la même fourchette d'abord, attente circulaire</td><td>ordre asymétrique (pairs/impairs) ou hiérarchie de ressources</td></tr>
+  <tr><td><b>Mort/famine</b></td><td>personne ne surveille l'heure, ou attente trop longue</td><td>monitor qui vérifie <code>time_to_die</code> en continu</td></tr>
+</table>
+
+<h2>États d'un philosophe (à afficher)</h2>
+<pre><code>timestamp_ms  id  has taken a fork
+timestamp_ms  id  is eating
+timestamp_ms  id  is sleeping
+timestamp_ms  id  is thinking
+timestamp_ms  id  died          &lt;- puis la simulation s'arrête</code></pre>
+
+<h2>Règles de survie (rappels d'implémentation)</h2>
+<ul class="rules">
+  <li><b>Toute donnée partagée</b> (drapeau de mort, compteurs, print) passe par un mutex.</li>
+  <li><b>Un seul philosophe</b> : cas spécial — 1 fourchette, il ne peut pas manger, il meurt.</li>
+  <li><b>Le compteur de mort</b> repart au <b>début</b> du dernier repas, pas à la fin.</li>
+  <li><b>À la mort</b>, on affiche « died » une seule fois et on stoppe tout le monde proprement.</li>
+</ul>
+
+<p style="margin-top:2rem"><a href="../lessons/0001-le-probleme-des-philosophes.html">← Retour à la leçon 01</a> · <a href="../GLOSSARY.md">Glossaire</a></p>
+
+</body>
+</html>

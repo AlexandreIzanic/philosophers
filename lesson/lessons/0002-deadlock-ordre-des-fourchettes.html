@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Leçon 02 — Le deadlock et l'ordre des fourchettes</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+</head>
+<body>
+
+<p class="eyebrow">Philosophers · Leçon 02 · Deadlock</p>
+<h1>Le deadlock, et pourquoi ton ordre pair/impair le tue</h1>
+<p class="subtitle">On zoome sur le premier dragon — et on prouve que ton code l'évite déjà.</p>
+
+<div class="callout">
+  <span class="label">Ce que tu sauras faire à la fin</span>
+  Expliquer <em>à l'oral, en soutenance</em> pourquoi les philosophes peuvent se
+  bloquer à jamais, et pourquoi la ligne <code>if (philo->id % 2 == 0)</code> de
+  ton <code>pick_up_forks</code> résout ce problème. Suite directe de la
+  <a href="0001-le-probleme-des-philosophes.html">leçon 01</a>.
+</div>
+
+<h2>1. Rappel : une fourchette = un mutex</h2>
+<p>Manger réclame <b>deux</b> fourchettes, gauche et droite, partagées avec les
+voisins. Une fourchette est un <code>pthread_mutex_t</code> ; la prendre, c'est
+<code>pthread_mutex_lock</code>. Un mutex n'appartient qu'à <b>un</b> thread à la
+fois — c'est tout son intérêt.<span class="cite">
+<a href="https://man7.org/linux/man-pages/man3/pthread_mutex_lock.3p.html">man&nbsp;pthread_mutex_lock(3)</a></span></p>
+
+<h2>2. Le piège : tout le monde attend, personne n'avance</h2>
+<p>Suppose que <em>chaque</em> philosophe fasse exactement la même chose au même
+instant : <em>« je prends d'abord ma gauche, puis ma droite »</em>.</p>
+
+<div class="callout warn">
+  <span class="label">Le scénario mortel</span>
+  Philosophe&nbsp;1 verrouille la fourchette&nbsp;1. Philosophe&nbsp;2 verrouille
+  la&nbsp;2. Philosophe&nbsp;3 la&nbsp;3… Chacun tient sa gauche et attend sa
+  droite — déjà tenue par le voisin. Personne ne lâche. <b>Blocage éternel.</b>
+</div>
+
+<p>C'est le <a href="../GLOSSARY.md">deadlock</a> : un cycle d'attente circulaire
+où chaque thread attend une ressource tenue par le suivant. Le programme ne
+plante pas — il se <em>fige</em>, plus aucune ligne ne s'affiche.<span class="cite">
+Chapitre « Dining Philosophers » de
+<a href="https://greenteapress.com/wp/semaphores/">The Little Book of Semaphores</a>.</span></p>
+
+<div class="callout">
+  <span class="label">Les 4 conditions de Coffman</span>
+  Un deadlock exige les <b>quatre</b> réunies : exclusion mutuelle ·
+  détention&nbsp;+&nbsp;attente · pas de préemption · <b>attente circulaire</b>.
+  En casser <b>une seule</b> suffit. On va casser la dernière.
+</div>
+
+<h2>3. Ta solution : casser la symétrie</h2>
+<p>Voici <em>ton</em> code, dans <code>src/messages.c</code> :</p>
+
+<pre><code>void	pick_up_forks(t_philo *philo)
+{
+	if (philo->id % 2 == 0)          // philosophes PAIRS : droite d'abord
+	{
+		pthread_mutex_lock(philo->right_fork);
+		pthread_mutex_lock(philo->left_fork);
+	}
+	else                              // philosophes IMPAIRS : gauche d'abord
+	{
+		pthread_mutex_lock(philo->left_fork);
+		pthread_mutex_lock(philo->right_fork);
+	}
+	custom_print_timestamp(philo, MSG_TAKEN_FORK);
+}</code></pre>
+
+<p>En imposant un <b>ordre de prise différent</b> selon la parité, tu détruis le
+scénario « tout le monde prend sa gauche en même temps ». La chaîne d'attente ne
+peut plus former un cercle complet : il reste toujours au moins un philosophe qui
+essaie d'attraper une fourchette déjà libre. Donc quelqu'un mange, puis relâche.
+<b>L'attente circulaire est brisée.</b></p>
+
+<div class="callout ok">
+  <span class="label">Le déclic à retenir</span>
+  Un deadlock sur des mutexes vient presque toujours d'un <b>ordre de
+  verrouillage incohérent</b> entre threads. Règle d'or : <em>tous les threads
+  verrouillent les mutexes dans le même ordre global</em>. Ta parité est une
+  façon astucieuse d'imposer cet ordre.
+</div>
+
+<h2>4. Vérifie ta compréhension</h2>
+
+<div class="quiz" data-answer="1">
+  <div class="q">Un deadlock, dans ce projet, se manifeste comment&nbsp;?</div>
+  <button class="opt">Le programme plante par erreur de segmentation immédiate</button>
+  <button class="opt">Le programme se fige, les threads attendent tous sans avancer</button>
+  <button class="opt">Le programme affiche deux messages mélangés sur une ligne</button>
+  <div class="feedback"
+     data-correct="Exact — le deadlock gèle l'exécution : aucun crash, juste l'arrêt silencieux."
+     data-wrong="Non : un deadlock ne crashe pas et ne mélange pas l'affichage — il fige tout. L'affichage mélangé, c'est une data race (prochaine leçon)."></div>
+</div>
+
+<div class="quiz" data-answer="2">
+  <div class="q">Pourquoi l'ordre pair/impair empêche-t-il le deadlock&nbsp;?</div>
+  <button class="opt">Parce qu'il rend les philosophes pairs plus rapides à manger</button>
+  <button class="opt">Parce qu'il libère les fourchettes plus tôt après le repas</button>
+  <button class="opt">Parce qu'il brise l'attente circulaire par des ordres différents</button>
+  <div class="feedback"
+     data-correct="Oui — en cassant la symétrie du verrouillage, on élimine l'attente circulaire de Coffman."
+     data-wrong="Non : ni la vitesse ni le moment de libération n'y changent rien. C'est l'ordre de verrouillage qui brise le cycle."></div>
+</div>
+
+<h2>5. À toi de jouer</h2>
+<p>Ouvre <code>src/messages.c</code> et fais l'expérience (mentale, ou réelle en
+commentant le <code>else</code>) : que se passe-t-il si <b>tous</b> les
+philosophes prennent la gauche en premier&nbsp;? Lance
+<code>./philo 5 800 200 200</code> et regarde si la simulation se fige, puis
+remets la parité. C'est exactement le genre de raisonnement qu'un correcteur peut
+te demander de tenir.</p>
+
+<div class="source">
+  <span class="label">Source primaire à lire</span>
+  <p style="margin:0.3rem 0 0">
+    <a href="https://greenteapress.com/wp/semaphores/">The Little Book of Semaphores</a>
+    — Allen B. Downey (gratuit). Chapitre <b>« Dining Philosophers »</b> : il
+    prouve pourquoi le deadlock arrive et présente les parades. LA référence sur
+    ce problème.
+  </p>
+</div>
+
+<div class="ask">
+  <b>Ton prof, c'est moi.</b> Un point flou — « pourquoi un cycle exactement ? »,
+  « et avec 1 seul philosophe ? », « helgrind détecte-t-il les deadlocks ? » —
+  pose-moi la question directement dans le chat. C'est comme ça qu'on progresse.
+</div>
+
+<div class="lesson-nav">
+  <span>← <a href="0001-le-probleme-des-philosophes.html">Leçon 01 — Orientation</a></span>
+  <span>Suivant : la data race &amp; le mutex d'affichage →</span>
+</div>
+
+<p style="margin-top:1.5rem; font-size:0.9rem;">
+  Référence : <a href="../reference/carte-du-projet.html">Carte du projet</a> ·
+  <a href="../GLOSSARY.md">Glossaire</a>
+</p>
+
+<script src="../assets/quiz.js"></script>
+</body>
+</html>

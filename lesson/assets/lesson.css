@@ -1,0 +1,142 @@
+/* ============================================================
+   lesson.css — shared stylesheet for the Philosophers course
+   Tufte-inspired: serif body, generous margins, muted palette.
+   Every lesson links this file. Print-friendly.
+   ============================================================ */
+
+:root {
+  --ink:      #1a1a1a;
+  --paper:    #fdfcf9;
+  --muted:    #6b6b6b;
+  --rule:     #d9d5cc;
+  --accent:   #7a1f1f;   /* deep philosophical red */
+  --accent2:  #1f5a4a;   /* muted green */
+  --code-bg:  #f3f1ea;
+  --warn-bg:  #fbf3e6;
+  --warn-br:  #c9922e;
+  --ok-bg:    #eef5ef;
+  --ok-br:    #3f7d5f;
+}
+
+html { font-size: 17px; }
+
+body {
+  font-family: Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  color: var(--ink);
+  background: var(--paper);
+  line-height: 1.55;
+  max-width: 42rem;
+  margin: 3rem auto;
+  padding: 0 1.5rem 6rem;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---- Header / lesson meta ---- */
+.eyebrow {
+  font-variant: small-caps;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin-bottom: 0.2rem;
+}
+h1 {
+  font-size: 2rem;
+  line-height: 1.15;
+  margin: 0.2rem 0 0.4rem;
+  font-weight: 600;
+}
+h2 {
+  font-size: 1.3rem;
+  margin: 2.4rem 0 0.6rem;
+  font-weight: 600;
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 0.2rem;
+}
+h3 { font-size: 1.05rem; margin: 1.6rem 0 0.4rem; }
+
+p, li { font-size: 1.05rem; }
+.subtitle { color: var(--muted); font-style: italic; font-size: 1.1rem; margin-top: 0; }
+
+a { color: var(--accent); text-decoration: none; border-bottom: 1px solid rgba(122,31,31,0.3); }
+a:hover { border-bottom-color: var(--accent); }
+
+/* ---- Callouts ---- */
+.callout {
+  border-left: 4px solid var(--rule);
+  padding: 0.6rem 1rem;
+  margin: 1.4rem 0;
+  background: #f7f5ef;
+  border-radius: 0 4px 4px 0;
+}
+.callout.warn { background: var(--warn-bg); border-left-color: var(--warn-br); }
+.callout.ok   { background: var(--ok-bg);  border-left-color: var(--ok-br); }
+.callout .label {
+  font-variant: small-caps; letter-spacing: 0.06em;
+  font-weight: 600; font-size: 0.8rem; display: block; margin-bottom: 0.2rem;
+}
+
+/* ---- Code ---- */
+code {
+  font-family: "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  background: var(--code-bg);
+  padding: 0.1em 0.35em;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+pre {
+  background: var(--code-bg);
+  padding: 1rem 1.2rem;
+  border-radius: 6px;
+  overflow-x: auto;
+  border: 1px solid var(--rule);
+}
+pre code { background: none; padding: 0; font-size: 0.85rem; line-height: 1.5; }
+
+/* ---- Definition list / mental model ---- */
+.rules { list-style: none; padding-left: 0; }
+.rules li { padding: 0.35rem 0; border-bottom: 1px dashed var(--rule); }
+.rules li b { color: var(--accent2); }
+
+/* ---- Two-dragons layout ---- */
+.dragons { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1.2rem 0; }
+.dragon { border: 1px solid var(--rule); border-radius: 6px; padding: 0.8rem 1rem; background: #fff; }
+.dragon h3 { margin-top: 0.2rem; color: var(--accent); }
+@media (max-width: 600px) { .dragons { grid-template-columns: 1fr; } }
+
+/* ---- Quiz widget (works with assets/quiz.js) ---- */
+.quiz { margin: 1.4rem 0; }
+.quiz .q { font-weight: 600; margin-bottom: 0.5rem; }
+.quiz .opt {
+  display: block; width: 100%; text-align: left;
+  font: inherit; font-size: 0.98rem;
+  background: #fff; border: 1px solid var(--rule);
+  border-radius: 5px; padding: 0.55rem 0.8rem; margin: 0.35rem 0;
+  cursor: pointer; transition: background 0.15s, border-color 0.15s;
+}
+.quiz .opt:hover { background: #f2efe8; }
+.quiz .opt.correct { background: var(--ok-bg); border-color: var(--ok-br); }
+.quiz .opt.wrong   { background: #f8e9e9; border-color: var(--accent); }
+.quiz .feedback { margin-top: 0.5rem; font-size: 0.95rem; min-height: 1.4rem; color: var(--muted); }
+
+/* ---- Footer / nav ---- */
+.lesson-nav {
+  margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--rule);
+  display: flex; justify-content: space-between; font-size: 0.9rem; color: var(--muted);
+}
+.ask {
+  margin-top: 2.5rem; background: #f1ede3; border-radius: 6px;
+  padding: 0.9rem 1.1rem; font-size: 0.98rem;
+}
+.ask b { color: var(--accent2); }
+
+.source {
+  margin-top: 2rem; padding: 0.9rem 1.1rem;
+  border: 1px solid var(--rule); border-radius: 6px; background: #fff;
+}
+.source .label { font-variant: small-caps; letter-spacing: 0.06em; color: var(--muted); font-size: 0.8rem; }
+
+@media print {
+  body { margin: 0; max-width: none; }
+  .quiz .opt { break-inside: avoid; }
+  a { color: var(--ink); border: none; }
+}
