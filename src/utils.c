@@ -25,9 +25,12 @@ void	init_args(t_table *table, char *argv[], int argc)
 
 void	one_philo(t_table *table)
 {
-	printf(RED "Philosopher 1 has taken a fork\n" RESET);
-	usleep(table->time_to_die * 1000);
-	printf(RED "Philosopher 1 has died in %d ms\n" RESET, table->time_to_die);
+	t_philo	*philo;
+
+	philo = &table->philos[0];
+	custom_print_timestamp(philo, MSG_TAKEN_FORK);
+	ft_usleep(table->time_to_die, table);
+	print_death(philo);
 }
 
 int	validate_args(t_table *table)

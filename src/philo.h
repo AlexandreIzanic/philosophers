@@ -45,8 +45,9 @@ typedef struct s_philo
 	pthread_mutex_t	*right_fork;
 	int				time_to_eat;
 	int				time_to_sleep;
-	int				is_dead;
-	int				last_meal_time;
+	long			last_meal_time;
+	pthread_mutex_t	meal_mutex;
+	struct s_table	*table;
 }	t_philo;
 
 typedef struct s_table
@@ -56,6 +57,10 @@ typedef struct s_table
 	int				nb_meals;
 	int				time_to_eat;
 	int				time_to_sleep;
+	long			start_time;
+	int				stop;
+	pthread_mutex_t	stop_mutex;
+	pthread_mutex_t	print_mutex;
 	t_philo			*philos;
 	pthread_mutex_t	*forks;
 }	t_table;
@@ -70,7 +75,13 @@ void			put_down_forks(t_philo *philo);
 void			philo_eat(t_philo *philo);
 void			philo_sleep(t_philo *philo);
 void			philo_think(t_philo *philo);
-struct timeval	start_time(void);
 void			custom_print_timestamp(t_philo *philo, const char *message);
+
+long			get_time_ms(void);
+void			ft_usleep(long ms, t_table *table);
+int				is_stopped(t_table *table);
+void			set_stop(t_table *table);
+void			print_death(t_philo *philo);
+void			*monitor_routine(void *arg);
 
 #endif

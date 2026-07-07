@@ -16,14 +16,17 @@ void	pick_up_forks(t_philo *philo)
 	if (philo->id % 2 == 0)
 	{
 		pthread_mutex_lock(philo->right_fork);
+		custom_print_timestamp(philo, MSG_TAKEN_FORK);
 		pthread_mutex_lock(philo->left_fork);
+		custom_print_timestamp(philo, MSG_TAKEN_FORK);
 	}
 	else
 	{
 		pthread_mutex_lock(philo->left_fork);
+		custom_print_timestamp(philo, MSG_TAKEN_FORK);
 		pthread_mutex_lock(philo->right_fork);
+		custom_print_timestamp(philo, MSG_TAKEN_FORK);
 	}
-	custom_print_timestamp(philo, MSG_TAKEN_FORK);
 }
 
 void	put_down_forks(t_philo *philo)
@@ -35,23 +38,24 @@ void	put_down_forks(t_philo *philo)
 void	philo_think(t_philo *philo)
 {
 	custom_print_timestamp(philo, MSG_THINK);
-	usleep(1000);
 }
 
 void	philo_eat(t_philo *philo)
 {
-	int	ms;
-
-	ms = philo->time_to_eat * 1000;
 	pick_up_forks(philo);
+	pthread_mutex_lock(&philo->meal_mutex);
+	philo->last_meal_time = get_time_ms();
+	pthread_mutex_unlock(&philo->meal_mutex);
 	custom_print_timestamp(philo, MSG_EAT);
-	usleep(ms);
+	ft_usleep(philo->time_to_eat, philo->table);
+	pthread_mutex_lock(&philo->meal_mutex);
 	philo->nb_meals_eaten++;
+	pthread_mutex_unlock(&philo->meal_mutex);
 	put_down_forks(philo);
 }
 
 void	philo_sleep(t_philo *philo)
 {
 	custom_print_timestamp(philo, MSG_SLEEP);
-	usleep(philo->time_to_sleep * 1000);
+	ft_usleep(philo->time_to_sleep, philo->table);
 }

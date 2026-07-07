@@ -1,8 +1,8 @@
 NAME = philo
 CC = gcc
-CFLAGS = -Wall -Wextra -Werror -I.
+CFLAGS = -Wall -Wextra -Werror -I. -pthread
 
-SRCS = src/main.c src/utils.c src/messages.c src/print.c
+SRCS = src/main.c src/utils.c src/messages.c src/print.c src/monitor.c
 OBJS = $(SRCS:.c=.o)
 
 all: $(NAME)
@@ -10,7 +10,7 @@ all: $(NAME)
 $(NAME): $(OBJS)
 	$(CC) $(CFLAGS) -o $(NAME) $(OBJS)
 
-%.o: %.c philo.h
+%.o: %.c src/philo.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:

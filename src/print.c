@@ -11,46 +11,52 @@
 /* ************************************************************************** */
 #include "philo.h"
 
-long	usec_to_ms(long microseconds);
-long	sec_to_ms(long seconds);
-long	get_timestamp(void);
-
-struct timeval	start_time(void)
+long	get_time_ms(void)
 {
-	static struct timeval	start;
+	struct timeval	tv;
 
-	if (start.tv_sec == 0 && start.tv_usec == 0)
-		gettimeofday(&start, NULL);
-	return (start);
+	gettimeofday(&tv, NULL);
+	return (tv.tv_sec * 1000L + tv.tv_usec / 1000);
 }
 
-long	usec_to_ms(long microseconds)
+int	is_stopped(t_table *table)
 {
-	return (microseconds / 1000);
+	int	value;
+
+	pthread_mutex_lock(&table->stop_mutex);
+	value = table->stop;
+	pthread_mutex_unlock(&table->stop_mutex);
+	return (value);
 }
 
-long	sec_to_ms(long seconds)
+void	set_stop(t_table *table)
 {
-	return (seconds * 1000);
+	pthread_mutex_lock(&table->stop_mutex);
+	table->stop = 1;
+	pthread_mutex_unlock(&table->stop_mutex);
 }
 
-long	get_timestamp(void)
+void	ft_usleep(long ms, t_table *table)
 {
-	struct timeval	start;
-	struct timeval	curr;
-	long			elapsed_ms;
+	long	start;
 
-	start = start_time();
-	gettimeofday(&curr, NULL);
-	elapsed_ms = sec_to_ms(curr.tv_sec - start.tv_sec)
-		+ usec_to_ms(curr.tv_usec - start.tv_usec);
-	return (elapsed_ms);
+	start = get_time_ms();
+	while (get_time_ms() - start < ms)
+	{
+		if (is_stopped(table))
+			break ;
+		usleep(200);
+	}
 }
 
 void	custom_print_timestamp(t_philo *philo, const char *message)
 {
-	long	timestamp;
+	t_table	*table;
 
-	timestamp = get_timestamp();
-	printf("%ld Philosopher %d %s\n", timestamp, philo->id, message);
+	table = philo->table;
+	pthread_mutex_lock(&table->print_mutex);
+	if (!is_stopped(table))
+		printf("%ld Philosopher %d %s\n",
+			get_time_ms() - table->start_time, philo->id, message);
+	pthread_mutex_unlock(&table->print_mutex);
 }
