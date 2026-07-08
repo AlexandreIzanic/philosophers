@@ -38,7 +38,6 @@ void	put_down_forks(t_philo *philo)
 void	philo_think(t_philo *philo)
 {
 	print_status(philo, MSG_THINK);
-	ft_usleep(20, philo->table);
 }
 
 void	philo_eat(t_philo *philo)
